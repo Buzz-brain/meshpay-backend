@@ -1,7 +1,7 @@
 
 # MeshPay API Documentation
 
-> Base URL: `http://localhost:3000/api`
+> Base URL: `https://meshpay-backend.onrender.com/api`
 
 ---
 

@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+
+// Welcome endpoint
+app.get('/', (req, res) => {
+    res.send('Welcome to the MeshPay API');
+});
+
 // Fetch all users
 app.get('/api/users', async (req, res) => {
     try {
