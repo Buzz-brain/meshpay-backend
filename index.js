@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
-
+require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
 app.use(cors({
@@ -14,9 +14,7 @@ app.use(express.json());
 
 // Connect to MongoDB
 mongoose
-  .connect(
-    "mongodb+srv://chinomsochristian03:wClILCmuLiAdRh4v@mesh.0e6xnyb.mongodb.net/?retryWrites=true&w=majority&appName=mesh"
-  )
+  .connect( process.env.DB_URL )
   .then(() => {
       console.log("Connected to MongoDB");
     // seedUsers();
@@ -31,35 +29,8 @@ const userSchema = new mongoose.Schema({
     accountNumber: { type: String, unique: true },
     amount: { type: Number, default: 300000 },
 });
-// wClILCmuLiAdRh4v;
-// chinomsochristian03;
 
 const User = mongoose.model('User', userSchema);
-
-// Seed users: remove all and add new with phone/accountNumber
-async function seedUsers() {
-    await User.deleteMany({});
-    const users = [
-        { fullname: 'John Doe', email: 'john@example.com', password: 'password1', phone: '09155802922' },
-        { fullname: 'Jane Smith', email: 'jane@example.com', password: 'password2', phone: '08012345678' },
-        { fullname: 'Mike Brown', email: 'mike@example.com', password: 'password3', phone: '08123456789' },
-        { fullname: 'Lisa White', email: 'lisa@example.com', password: 'password4', phone: '07098765432' },
-        { fullname: 'Sam Green', email: 'sam@example.com', password: 'password5', phone: '09087654321' },
-    ];
-    for (const user of users) {
-        const hashed = await bcrypt.hash(user.password, 10);
-        const accountNumber = user.phone.slice(-10);
-        await User.create({
-            fullname: user.fullname,
-            email: user.email,
-            password: hashed,
-            phone: user.phone,
-            accountNumber,
-            amount: 300000,
-        });
-    }
-    console.log('Seeded 5 users with phone and accountNumber');
-}
 
 // Fetch all users
 app.get('/api/users', async (req, res) => {
@@ -69,6 +40,17 @@ app.get('/api/users', async (req, res) => {
         console.log(`Fetched ${users.length} users`);
     } catch (err) {
         res.status(500).json({ message: 'Error fetching users', error: err.message });
+    }
+});
+
+// Delete all users
+app.delete('/api/users', async (req, res) => {
+    try {
+        await User.deleteMany({});
+        res.json({ message: 'All users deleted' });
+        console.log('All users deleted');
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting users', error: err.message });
     }
 });
 
@@ -111,6 +93,37 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// Fetch account balance by account number
+app.get('/api/balance', async (req, res) => {
+    const accountNumber = req.query.account;
+    if (!accountNumber)
+      return res.status(400).json({ message: "Account number is required" });
+    try {
+        const user = await User.findOne({ accountNumber });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json({ balance: user.amount });
+        console.log(
+          `Fetched balance for account: ${accountNumber}, balance: ${user.amount}`
+        );
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching balance', error: err.message });
+    }
+});
+
+// Fetch fullname by account number (using query parameter)
+app.get('/api/verify-name', async (req, res) => {
+    const accountNumber = req.query.account;
+    if (!accountNumber) return res.status(400).json({ message: 'Account number is required' });
+    try {
+        const user = await User.findOne({ accountNumber });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json({ fullname: user.fullname });
+        console.log(`Fetched fullname for accountNumber: ${accountNumber}, fullname: ${user.fullname}`);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching fullname', error: err.message });
+    }
+});
+
 // Transfer endpoint (by account number)
 app.post('/api/transfer', async (req, res) => {
     try {
@@ -137,32 +150,6 @@ app.post('/api/transfer', async (req, res) => {
         console.log(`Transfer of ${amount} from ${sender.fullname} (${from}) to ${receiver.fullname} (${to}) successful`);
     } catch (err) {
         res.status(500).json({ message: 'Error processing transaction', error: err.message });
-    }
-});
-
-// Fetch account balance by account number
-app.get('/api/balance', async (req, res) => {
-    try {
-        const user = await User.findOne({ accountNumber: req.query.account });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        res.json({ balance: user.amount });
-        console.log(`Fetched balance for account: ${req.query.account}, balance: ${user.amount}`);
-    } catch (err) {
-        res.status(500).json({ message: 'Error fetching balance', error: err.message });
-    }
-});
-
-// Fetch fullname by account number (using query parameter)
-app.get('/api/verify-name', async (req, res) => {
-    const accountNumber = req.query.account;
-    if (!accountNumber) return res.status(400).json({ message: 'Account number is required' });
-    try {
-        const user = await User.findOne({ accountNumber });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        res.json({ fullname: user.fullname });
-        console.log(`Fetched fullname for accountNumber: ${accountNumber}, fullname: ${user.fullname}`);
-    } catch (err) {
-        res.status(500).json({ message: 'Error fetching fullname', error: err.message });
     }
 });
 
