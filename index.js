@@ -30,7 +30,28 @@ const userSchema = new mongoose.Schema({
     amount: { type: Number, default: 300000 },
 });
 
+
+const notificationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  message: String,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Transaction schema
+const transactionSchema = new mongoose.Schema({
+  from: String,
+  to: String,
+  amount: Number,
+  timestamp: { type: Date, default: Date.now },
+  status: { type: String, default: 'success' },
+  description: String
+});
+
+
 const User = mongoose.model('User', userSchema);
+const Notification = mongoose.model('Notification', notificationSchema);
+const Transaction = mongoose.model('Transaction', transactionSchema);
 
 
 
@@ -144,35 +165,93 @@ app.get('/api/verify-name', async (req, res) => {
 // Transfer endpoint (by account number)
 app.post('/api/transfer', async (req, res) => {
     try {
-        const { from, to, amount } = req.body;
-        if (!from || !to || !amount)
-          return res.status(400).json({ message: "All fields required" });
-        if (from === to)
-          return res
-            .status(400)
-            .json({ message: "Sender and receiver cannot be the same" });
-        const sender = await User.findOne({ accountNumber: from });
-        const receiver = await User.findOne({ accountNumber: to });
-        if (!sender || !receiver) return res.status(404).json({ message: 'Sender or receiver not found' });
-        if (sender.amount < amount) return res.status(400).json({ message: 'Insufficient funds' });
-        sender.amount -= amount;
-        receiver.amount += Number(amount);
-        await sender.save();
-        await receiver.save();
-        res.json({
-            message: 'Transaction successful',
-            senderAccountNumber: sender.accountNumber,
-            senderName: sender.fullname,
-            senderBalance: sender.amount,
-            receiverAccountNumber: receiver.accountNumber,
-            receiverName: receiver.fullname,
-            receiverBalance: receiver.amount,
-        });
+      const { from, to, amount } = req.body;
+      if (!from || !to || !amount)
+        return res.status(400).json({ message: "All fields required" });
+      if (from === to)
+        return res
+          .status(400)
+          .json({ message: "Sender and receiver cannot be the same" });
+      const sender = await User.findOne({ accountNumber: from });
+      const receiver = await User.findOne({ accountNumber: to });
+      if (!sender || !receiver) return res.status(404).json({ message: 'Sender or receiver not found' });
+      if (sender.amount < amount) return res.status(400).json({ message: 'Insufficient funds' });
+      sender.amount -= amount;
+      receiver.amount += Number(amount);
+      await sender.save();
+      await receiver.save();
 
-        console.log(`Transfer of ${amount} from ${sender.fullname} (${from}) to ${receiver.fullname} (${to}) successful`);
+      // Store transaction
+      await Transaction.create({
+        from,
+        to,
+        amount,
+        status: 'success',
+        description: req.body.description || '',
+      });
+
+      // Create notification for receiver
+      await Notification.create({
+        userId: receiver._id,
+        message: `You have received ₦${amount} from ${sender.fullname} (${sender.accountNumber})`,
+      });
+
+      res.json({
+        message: "Transaction successful",
+        senderAccountNumber: sender.accountNumber,
+        senderName: sender.fullname,
+        senderBalance: sender.amount,
+        receiverAccountNumber: receiver.accountNumber,
+        receiverBalance: receiver.amount
+      });
+
+      console.log(
+        `Transfer of ${amount} from ${sender.fullname} (${from}) to ${receiver.fullname} (${to}) successful`
+      );
     } catch (err) {
         res.status(500).json({ message: 'Error processing transaction', error: err.message });
     }
+});
+
+// Get notifications for a user
+app.get('/api/notifications', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ message: 'userId is required' });
+  try {
+    const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
+    res.json({ notifications });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching notifications', error: err.message });
+  }
+});
+
+// Mark all notifications as read for a user
+app.post('/api/notifications/mark-read', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ message: 'userId is required' });
+  try {
+    await Notification.updateMany({ userId, read: false }, { $set: { read: true } });
+    res.json({ message: 'Notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error marking notifications as read', error: err.message });
+  }
+});
+
+// Get transactions for a user (sent or received)
+app.get('/api/transactions', async (req, res) => {
+  const { accountNumber } = req.query;
+  if (!accountNumber) return res.status(400).json({ message: 'accountNumber is required' });
+  try {
+    const transactions = await Transaction.find({
+      $or: [
+        { from: accountNumber },
+        { to: accountNumber }
+      ]
+    }).sort({ timestamp: -1 });
+    res.json({ transactions });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching transactions', error: err.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
