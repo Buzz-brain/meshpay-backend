@@ -44,8 +44,10 @@ const transactionSchema = new mongoose.Schema({
   to: String,
   amount: Number,
   timestamp: { type: Date, default: Date.now },
-  status: { type: String, default: 'success' },
-  description: String
+  status: { type: String, default: "success" },
+  description: String,
+  senderName: String,
+  receiverName: String,
 });
 
 
@@ -188,6 +190,8 @@ app.post('/api/transfer', async (req, res) => {
         amount,
         status: 'success',
         description: req.body.description || '',
+        senderName: sender.fullname,
+        receiverName: receiver.fullname
       });
 
       // Create notification for receiver
@@ -249,6 +253,7 @@ app.get('/api/transactions', async (req, res) => {
       ]
     }).sort({ timestamp: -1 });
     res.json({ transactions });
+    console.log(transactions)
   } catch (err) {
     res.status(500).json({ message: 'Error fetching transactions', error: err.message });
   }
