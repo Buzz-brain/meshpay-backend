@@ -93,7 +93,17 @@ app.post('/api/login', async (req, res) => {
         if (!user) return res.status(400).json({ message: 'Invalid credentials' });
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(400).json({ message: 'Invalid credentials' });
-        res.json({ message: 'Login successful', user: { id: user._id, fullname: user.fullname, email: user.email, amount: user.amount } });
+        res.json({
+          message: "Login successful",
+          user: {
+            id: user._id,
+            fullname: user.fullname,
+            email: user.email,
+            phone: user.phone,
+            accountNumber: user.accountNumber,
+            amount: user.amount,
+          },
+        });
         console.log(`User logged in: ${user.email}, accountNumber: ${user.accountNumber}`);
     } catch (err) {
         res.status(500).json({ message: 'Error logging in', error: err.message });

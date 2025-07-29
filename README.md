@@ -66,6 +66,8 @@
     "id": "688353b0783c00497e36f94a",
     "fullname": "Buzz brain",
     "email": "buzzbrain@gmail.com",
+    "phone": "09155802922",
+    "accountNumber": "9155802922",
     "amount": 300000
   }
 }
