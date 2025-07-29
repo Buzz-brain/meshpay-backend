@@ -118,7 +118,7 @@ app.get('/api/balance', async (req, res) => {
     try {
         const user = await User.findOne({ accountNumber });
         if (!user) return res.status(404).json({ message: 'User not found' });
-        res.json({ balance: user.amount });
+        res.json({ amount: user.amount });
         console.log(
           `Fetched balance for account: ${accountNumber}, balance: ${user.amount}`
         );
@@ -161,9 +161,14 @@ app.post('/api/transfer', async (req, res) => {
         await receiver.save();
         res.json({
             message: 'Transaction successful',
+            senderAccountNumber: sender.accountNumber,
+            senderName: sender.fullname,
             senderBalance: sender.amount,
+            receiverAccountNumber: receiver.accountNumber,
+            receiverName: receiver.fullname,
             receiverBalance: receiver.amount,
         });
+
         console.log(`Transfer of ${amount} from ${sender.fullname} (${from}) to ${receiver.fullname} (${to}) successful`);
     } catch (err) {
         res.status(500).json({ message: 'Error processing transaction', error: err.message });

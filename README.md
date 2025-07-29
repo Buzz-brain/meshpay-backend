@@ -96,7 +96,11 @@
 ```json
 {
   "message": "Transaction successful",
+  "senderAccountNumber": "9155802922",
+  "senderName": "Buzz brain",
   "senderBalance": 200000,
+  "receiverAccountNumber": "8123456789",
+  "receiverName": "John",
   "receiverBalance": 400000
 }
 ```
@@ -144,7 +148,7 @@
 **Success Response:** (Status 200)
 ```json
 {
-  "balance": 300000
+  "amount": 300000
 }
 ```
 
