@@ -206,7 +206,8 @@ app.post('/api/transfer', async (req, res) => {
         senderName: sender.fullname,
         senderBalance: sender.amount,
         receiverAccountNumber: receiver.accountNumber,
-        receiverBalance: receiver.amount
+        receiverName: receiver.fullname,
+        receiverBalance: receiver.amount,
       });
 
       console.log(
