@@ -21,6 +21,7 @@ mongoose
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// User schema
 const userSchema = new mongoose.Schema({
     fullname: String,
     email: { type: String, unique: true },
@@ -30,7 +31,7 @@ const userSchema = new mongoose.Schema({
     amount: { type: Number, default: 300000 },
 });
 
-
+// Notification schema
 const notificationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   message: String,
@@ -50,12 +51,9 @@ const transactionSchema = new mongoose.Schema({
   receiverName: String,
 });
 
-
 const User = mongoose.model('User', userSchema);
 const Notification = mongoose.model('Notification', notificationSchema);
 const Transaction = mongoose.model('Transaction', transactionSchema);
-
-
 
 // Welcome to the MeshPay API endpoint
 app.get('/', (req, res) => {
@@ -166,6 +164,7 @@ app.get('/api/verify-name', async (req, res) => {
 
 // Transfer endpoint (by account number)
 app.post('/api/transfer', async (req, res) => {
+  console.log(req.body)
     try {
       const { from, to, amount } = req.body;
       if (!from || !to || !amount)
@@ -223,7 +222,8 @@ app.get('/api/notifications', async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ message: 'userId is required' });
   try {
-    const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
+    // Only fetch unread notifications
+    const notifications = await Notification.find({ userId, read: false }).sort({ createdAt: -1 });
     res.json({ notifications });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching notifications', error: err.message });
@@ -254,7 +254,7 @@ app.get('/api/transactions', async (req, res) => {
       ]
     }).sort({ timestamp: -1 });
     res.json({ transactions });
-    console.log(transactions)
+    // console.log(transactions);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching transactions', error: err.message });
   }
